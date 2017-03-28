@@ -462,7 +462,7 @@ def RefNodes_Tri(degree):
 
 	Returns
 		- ``r`` (``float64 array``) : x-coordinates of uniform nodes in the reference triangle
-		- ``r`` (``float64 array``) : y-coordinates of uniform nodes in the reference triangle
+		- ``s`` (``float64 array``) : y-coordinates of uniform nodes in the reference triangle
 
 	Example
 		>>> N = 3
@@ -486,6 +486,43 @@ def RefNodes_Tri(degree):
 			r[int((degree + 1)*j - j*(j-1)/2) + np.arange(0,degree+1-j,1)] = x[np.arange(0,degree+1-j,1)]
 			s[int((degree + 1)*j - j*(j-1)/2) + np.arange(0,degree+1-j,1)] = x[j]
 	return (r,s)
+
+def rs2ab(r,s):
+	"""
+	Transfer from (r,s) to (a,b) coordinates in triangle
+	
+	Parameters
+		- ``r`` (``float64 array``) : x-coordinates of uniform nodes in the reference triangle
+		- ``s`` (``float64 array``) : y-coordinates of uniform nodes in the reference triangle
+
+	Returns
+		- ``a`` (``float64 array``) : 2(1+r)/(1-s)-1
+		- ``b`` (``float64 array``) : s
+
+	Example
+		>>> N = 3
+		>>> r, s = RefNodes_Tri(N)
+		>>> a, b = rs2ab(r,s)
+		>>> a
+		array([ -1.00000000e+00,  -3.33333333e-01,   3.33333333e-01,
+		   1.00000000e+00,  -1.00000000e+00,  -1.11022302e-16,
+		   1.00000000e+00,  -1.00000000e+00,   1.00000000e+00,
+		   -1.00000000e+00])
+		>>> b
+		array([-1.        , -1.        , -1.        , -1.        , -0.33333333,
+		   -0.33333333, -0.33333333,  0.33333333,  0.33333333,  1.        ])
+	"""
+	Np = r.size
+	a = np.zeros(Np,float)
+
+	for n in range(0,Np):
+		if s[n] != 1:
+			a[n] = 2 * (1 + r[n])/(1 - s[n]) - 1
+		else:
+			a[n] = -1.
+
+	b = s
+	return (a,b)
 
 def two_dim(c4n, n4e, n4sDb, f):
 	print("two_dim is called.")
