@@ -216,6 +216,14 @@ class TestMethods(unittest.TestCase):
 		self.assertTrue(LA.norm(diff_a) < 1E-8)
 		self.assertTrue(LA.norm(diff_b) < 1E-8)
 
+	def test_Simplex2DP(self):
+		from mozart.poisson.solve import Simplex2DP
+		a = np.array([0,1])
+		b = np.array([2,3])
+		p = Simplex2DP(a,b,0,0)
+		diff_p = p - np.array([ 0.70710678, 0.70710678])
+		self.assertTrue(LA.norm(diff_p) < 1E-8)
+
 	def test_solve_twodim(self):
 		from mozart.poisson.solve import two_dim
 		two_dim(None, None, None, None)
