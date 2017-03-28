@@ -194,6 +194,10 @@ class TestMethods(unittest.TestCase):
 
 	def test_RefNodes_Tri(self):
 		from mozart.poisson.solve import RefNodes_Tri
+		N = 0
+		r0, s0 = RefNodes_Tri(N)
+		diff_r0 = r0 - np.array([-1.0/3])
+		diff_s0 = s0 - np.array([-1.0/3])
 		N = 3
 		r, s = RefNodes_Tri(N)
 		diff_r = r - np.array([-1, -1.0/3, 1.0/3, 1, -1, -1.0/3, 1.0/3, -1, -1.0/3, -1])
