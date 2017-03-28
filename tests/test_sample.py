@@ -205,6 +205,17 @@ class TestMethods(unittest.TestCase):
 		self.assertTrue(LA.norm(diff_r) < 1E-8)
 		self.assertTrue(LA.norm(diff_s) < 1E-8)
 
+	def test_rs2ab(self):
+		from mozart.poisson.solve import RefNodes_Tri
+		from mozart.poisson.solve import rs2ab
+		N = 3
+		r, s = RefNodes_Tri(N)
+		a, b = rs2ab(r,s)
+		diff_a = a - np.array([-1, -1.0/3, 1.0/3, 1, -1, 0, 1, -1, 1, -1])
+		diff_b = b - np.array([-1, -1, -1, -1, -1.0/3, -1.0/3, -1.0/3, 1.0/3, 1.0/3, 1])
+		self.assertTrue(LA.norm(diff_a) < 1E-8)
+		self.assertTrue(LA.norm(diff_b) < 1E-8)
+
 	def test_solve_twodim(self):
 		from mozart.poisson.solve import two_dim
 		two_dim(None, None, None, None)
