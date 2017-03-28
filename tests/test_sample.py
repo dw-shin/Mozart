@@ -179,8 +179,6 @@ class TestMethods(unittest.TestCase):
 		self.assertTrue(np.abs(rateL2[-1]) > N+0.9)
 		self.assertTrue(np.abs(rateH1[-1]) > N-0.1)
 
-
-
 	def test_solve_onedim(self):
 		from mozart.mesh.rectangle import unit_interval
 		N = 3
@@ -192,8 +190,16 @@ class TestMethods(unittest.TestCase):
 		x = one_dim(c4n, n4e, n4Db, f, u_D)
 		diff_x = x - np.array([0., 0.125, 0.])
 		self.assertTrue(LA.norm(diff_x) < 1E-8)
-
 		self.assertTrue(True)
+
+	def test_RefNodes_Tri(self):
+		from mozart.poisson.solve import RefNodes_Tri
+		N = 3
+		r, s = RefNodes_Tri(N)
+		diff_r = r - np.array([-1, -1.0/3, 1.0/3, 1, -1, -1.0/3, 1.0/3, -1, -1.0/3, -1])
+		diff_s = s - np.array([-1, -1, -1, -1, -1.0/3, -1.0/3, -1.0/3, 1.0/3, 1.0/3, 1])
+		self.assertTrue(LA.norm(diff_r) < 1E-8)
+		self.assertTrue(LA.norm(diff_s) < 1E-8)
 
 	def test_solve_twodim(self):
 		from mozart.poisson.solve import two_dim
