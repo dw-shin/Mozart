@@ -524,6 +524,31 @@ def rs2ab(r,s):
 	b = s
 	return (a,b)
 
+def Simplex2DP(a,b,i,j):
+	"""
+	Compute 2D orthonormal polynomial on simplex at (a, b) of order (i, j)
+	
+	Parameters
+		- ``a`` (``folat64 array``) : the value for the first normalized Jacobi polynomial in modal basis
+		- ``b`` (``float64 array``) : the value for the second normalized Jacobi polynomial in modal basis
+		- ``i`` (``int32``) : order of the the first normalized Jacobi polynomial in modal basis
+		- ``j`` (``int32``) : order of the the second normalized Jacobi polynomial in modal basis
+
+	Returns
+		- ``P`` (``float64 array``) : evaluated value
+
+	Example
+		>>> a = np.array([0, 1])
+		>>> b = np.array([2, 3])
+		>>> p = Simplex2DP(a, b, 0, 0)
+		>>> p
+		array([ 0.70710678,  0.70710678])
+	"""
+	h1 = nJacobiP(a,0,0,i)
+	h2 = nJacobiP(b,2*i+1,0,j)
+	P = np.sqrt(2.)*h1*h2*(1-b)**i
+	return P
+
 def two_dim(c4n, n4e, n4sDb, f):
 	print("two_dim is called.")
 
