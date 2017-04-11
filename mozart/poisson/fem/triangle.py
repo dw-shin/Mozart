@@ -79,14 +79,14 @@ def getIndex(degree, nrNodes, n4e):
 		- ``n4e`` (``int32 array``) : nodes for elements
 
 	Returns
-		- ``index`` (``int32 array``) : indices on each element
+		- ``ind4e`` (``int32 array``) : indices on each element
 
 	Example
 		>>> N = 2
 		>>> c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
 		>>> n4e = np.array([[1, 3, 0], [3, 1, 2]])
-		>>> index = getIndex(N, c4n.shape[0], n4e)
-		>>> index
+		>>> ind4e = getIndex(N, c4n.shape[0], n4e)
+		>>> ind4e
 		array([[0, 7, 1, 5, 4, 3],
 		   [2, 8, 3, 6, 4, 1]])
 	"""
@@ -113,19 +113,19 @@ def getIndex(degree, nrNodes, n4e):
 	BDindex_F = np.array([(np.arange(degree-1,0,-1)*(2*degree+4 - np.arange(degree,1,-1))/2).astype(int),
 		np.arange(1,degree), (degree + np.arange(1,degree)*(2*degree+2 - np.arange(2,degree+1))/2).astype(int)])
 	Iindex = np.setdiff1d(np.arange(0,nrLocal),np.hstack((BDindex_F.flatten(),np.array([0, degree, nrLocal-1]))))
-	index = np.zeros((nrElems,nrLocal), dtype = int)
-	index[:,np.array([0, degree, nrLocal-1])] = n4e[:,np.array([2, 0, 1])]
+	ind4e = np.zeros((nrElems,nrLocal), dtype = int)
+	ind4e[:,np.array([0, degree, nrLocal-1])] = n4e[:,np.array([2, 0, 1])]
 	edge =  (np.tile(S_ind[:,1],(degree-1,1)).transpose()*np.tile(np.arange(0,degree-1),(n4e.shape[0],1))) + \
 	   (np.tile((1-S_ind[:,1]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
-	index[:,BDindex_F[0]] = nrNodes + np.tile(s4e[:,1]*(degree-1),(degree-1,1)).transpose() + edge
+	ind4e[:,BDindex_F[0]] = nrNodes + np.tile(s4e[:,1]*(degree-1),(degree-1,1)).transpose() + edge
 	edge =  (np.tile(S_ind[:,2],(degree-1,1)).transpose()*np.tile(np.arange(0,degree-1),(n4e.shape[0],1))) + \
 	   (np.tile((1-S_ind[:,2]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
-	index[:,BDindex_F[1]] = nrNodes + np.tile(s4e[:,2]*(degree-1),(degree-1,1)).transpose() + edge
+	ind4e[:,BDindex_F[1]] = nrNodes + np.tile(s4e[:,2]*(degree-1),(degree-1,1)).transpose() + edge
 	edge =  (np.tile(S_ind[:,0],(degree-1,1)).transpose()*np.tile(np.arange(0,degree-1),(n4e.shape[0],1))) + \
 	   (np.tile((1-S_ind[:,0]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
-	index[:,BDindex_F[2]] = nrNodes + np.tile(s4e[:,0]*(degree-1),(degree-1,1)).transpose() + edge
-	index[:,Iindex] = np.arange(nNS,nNS+nrElems*nri).reshape(nrElems,nri)
-	return index
+	ind4e[:,BDindex_F[2]] = nrNodes + np.tile(s4e[:,0]*(degree-1),(degree-1,1)).transpose() + edge
+	ind4e[:,Iindex] = np.arange(nNS,nNS+nrElems*nri).reshape(nrElems,nri)
+	return ind4e
 
 def compute_n4s(n4e):
 	"""
