@@ -334,6 +334,18 @@ class TestFemTriangle(unittest.TestCase):
 		self.assertTrue(LA.norm(diff_n4Db) < 1E-8)
 		self.assertTrue(LA.norm(diff_n4Nb) < 1E-8)
 
+	def test_getIndex(self):
+		from mozart.poisson.fem.triangle import getIndex
+		N = 4
+		c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0.5, 0.5]])
+		n4e = np.array([[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]])
+		ind4e = getIndex(N, c4n.shape[0], n4e)
+		diff_ind4e = ind4e - np.array([[4, 28, 27, 26, 0, 19, 29, 30, 5, 18, 31, 6, 17, 7, 1],
+			[4, 19, 18, 17, 1, 22, 32, 33, 8, 21, 34, 9, 20, 10, 2],
+			[4, 22, 21, 20, 2, 25, 35, 36, 11, 24, 37, 12, 23, 13, 3],
+			[4, 25, 24, 23, 3, 28, 38, 39, 14, 27, 40, 15, 26, 16, 0]])
+		self.assertTrue(LA.norm(diff_ind4e) < 1E-8)
+
 
 class TestTecplot(unittest.TestCase):
 	def test_tecplot_triangle(self):
