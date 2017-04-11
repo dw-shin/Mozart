@@ -69,6 +69,64 @@ def getMatrix(degree):
 	Sss_R = np.dot(np.dot(np.transpose(Ds_R),M_R),Ds_R)
 	return (M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R)
 
+def getIndex(degree, nrNodes, n4e):
+	"""
+	Get indices on each element
+
+	Paramters
+		- ``degree`` (``int32``) : degree of polynomial
+		- ``nrNodes`` (``int32``) : the number of nodes (c4n.shape[0])
+		- ``n4e`` (``int32 array``) : nodes for elements
+
+	Returns
+		- ``index`` (``int32 array``) : indices on each element
+
+	Example
+		>>> N = 2
+		>>> c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+		>>> n4e = np.array([[1, 3, 0], [3, 1, 2]])
+		>>> index = getIndex(N, c4n.shape[0], n4e)
+		>>> index
+		array([[0, 7, 1, 5, 4, 3],
+		   [2, 8, 3, 6, 4, 1]])
+	"""
+	allSides = np.vstack((np.vstack((n4e[:,[0,1]], n4e[:,[1,2]])),n4e[:,[2,0]]))
+	tmp=np.sort(allSides)
+	x, y = tmp.T
+	_, ind, back = np.unique(x + y*1.0j, return_index=True, return_inverse=True)
+	n4sInd = np.sort(ind)
+	n4s = allSides[n4sInd,:]
+
+	sortInd = ind.argsort()
+	sideNr = np.zeros(ind.size, dtype = int)
+	sideNr[sortInd] = np.arange(0,ind.size)
+	s4e = sideNr[back].reshape(3,-1).transpose().astype('int')
+
+	nrElems = n4e.shape[0]
+	sideNr2 = np.zeros(3*nrElems, dtype = int)
+	sideNr2[n4sInd] = 1
+	S_ind = sideNr2.reshape(n4e.shape[1],n4e.shape[0]).transpose()
+
+	nrLocal = int((degree+1)*(degree+2)/2)
+	nri = int((degree-2)*(degree-1)/2)
+	nNS = nrNodes + (degree-1)*n4s.shape[0]
+	BDindex_F = np.array([(np.arange(degree-1,0,-1)*(2*degree+4 - np.arange(degree,1,-1))/2).astype(int),
+		np.arange(1,degree), (degree + np.arange(1,degree)*(2*degree+2 - np.arange(2,degree+1))/2).astype(int)])
+	Iindex = np.setdiff1d(np.arange(0,nrLocal),np.hstack((BDindex_F.flatten(),np.array([0, degree, nrLocal-1]))))
+	index = np.zeros((nrElems,nrLocal), dtype = int)
+	index[:,np.array([0, degree, nrLocal-1])] = n4e[:,np.array([2, 0, 1])]
+	edge =  (np.tile(S_ind[:,1],(degree-1,1)).transpose()*np.tile(np.arange(0,degree-1),(n4e.shape[0],1))) + \
+	   (np.tile((1-S_ind[:,1]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
+	index[:,BDindex_F[0]] = nrNodes + np.tile(s4e[:,1]*(degree-1),(degree-1,1)).transpose() + edge
+	edge =  (np.tile(S_ind[:,2],(degree-1,1)).transpose()*np.tile(np.arange(0,degree-1),(n4e.shape[0],1))) + \
+	   (np.tile((1-S_ind[:,2]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
+	index[:,BDindex_F[1]] = nrNodes + np.tile(s4e[:,2]*(degree-1),(degree-1,1)).transpose() + edge
+	edge =  (np.tile(S_ind[:,0],(degree-1,1)).transpose()*np.tile(np.arange(0,degree-1),(n4e.shape[0],1))) + \
+	   (np.tile((1-S_ind[:,0]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
+	index[:,BDindex_F[2]] = nrNodes + np.tile(s4e[:,0]*(degree-1),(degree-1,1)).transpose() + edge
+	index[:,Iindex] = np.arange(nNS,nNS+nrElems*nri).reshape(nrElems,nri)
+	return index
+
 def compute_n4s(n4e):
 	"""
 	Get a matrix whose each row contains end points of the corresponding side (or edge)
