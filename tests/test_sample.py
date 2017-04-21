@@ -336,15 +336,23 @@ class TestFemTriangle(unittest.TestCase):
 
 	def test_getIndex(self):
 		from mozart.poisson.fem.triangle import getIndex
-		N = 4
-		c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0.5, 0.5]])
-		n4e = np.array([[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]])
-		ind4e = getIndex(N, c4n.shape[0], n4e)
-		diff_ind4e = ind4e - np.array([[4, 28, 27, 26, 0, 19, 29, 30, 5, 18, 31, 6, 17, 7, 1],
-			[4, 19, 18, 17, 1, 22, 32, 33, 8, 21, 34, 9, 20, 10, 2],
-			[4, 22, 21, 20, 2, 25, 35, 36, 11, 24, 37, 12, 23, 13, 3],
-			[4, 25, 24, 23, 3, 28, 38, 39, 14, 27, 40, 15, 26, 16, 0]])
+		N = 3
+		c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+		n4e = np.array([[1, 3, 0], [3, 1, 2]])
+		n4sDb = np.array([[0, 1], [2, 3], [3, 4]])
+		n4sNb = np.array([[1, 2]])
+		c4nNew, ind4e, ind4Db, ind4Nb = getIndex(N, c4n, n4e, n4sDb, n4sNb)
+		diff_c4nNew = c4nNew - np.array([[0., 0.], [1.,  0.], [1., 1.], [ 0., 1.], [2.0/3, 1.0/3],
+			[1.0/3, 2.0/3], [0., 2.0/3], [0., 1.0/3], [1., 1.0/3], [1., 2.0/3], [1.0/3, 0.],
+			[2.0/3, 0.], [2.0/3, 1.], [1.0/3, 1.], [1.0/3, 1.0/3], [2.0/3, 2.0/3]])
+		diff_ind4e = ind4e - np.array([[ 0, 10, 11,  1,  7, 14,  4,  6,  5,  3],
+			[ 2, 12, 13,  3,  9, 15,  5,  8,  4,  1]])
+		diff_ind4Db = ind4Db - np.array([ 0,  1,  2,  3,  4,  4,  5, 10, 11, 12, 13])
+		diff_ind4Nb = ind4Nb - np.array([[1, 8, 9, 2]])
+		self.assertTrue(LA.norm(diff_c4nNew) < 1E-8)
 		self.assertTrue(LA.norm(diff_ind4e) < 1E-8)
+		self.assertTrue(LA.norm(diff_ind4Db) < 1E-8)
+		self.assertTrue(LA.norm(diff_ind4Nb) < 1E-8)
 
 
 class TestTecplot(unittest.TestCase):
