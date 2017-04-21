@@ -403,7 +403,119 @@ def refineUniformRed(c4n, n4e, n4Db, n4Nb):
 
 	return (c4nNew, n4eNew, n4DbNew, n4NbNew)
 
+def solve(c4nNew, n4e, ind4e, ind4Db, ind4Nb, M_R, Srr_R, Srs_R, Ssr_R, Sss_R, M1D_R, f, u_D, u_N):
+	"""
+	Refine a given mesh uniformly using the red refinement
+
+	Paramters
+		- ``c4nNew`` (``float64 array``) : coordinates for all nodes
+		- ``n4e`` (``int32 array``) : nodes for elements
+		- ``ind4e`` (``int32 array``) : indices on each element
+		- ``ind4Db`` (``int32 array``) : indices on Dirichlet boundary
+		- ``ind4Nb`` (``int32 array``) : indices on Neumann boundary
+		- ``M_R`` (``float64 array``) : Mass matrix on the reference triangle
+		- ``Srr_R`` (``float64 array``) : Stiffness matrix on the reference triangle (int_T \partial_r phi_i \partial_r phi_j dr)
+		- ``Srs_R`` (``float64 array``) : Stiffness matrix on the reference triangle (int_T \partial_r phi_i \partial_s phi_j dr)
+		- ``Ssr_R`` (``float64 array``) : Stiffness matrix on the reference triangle (int_T \partial_s phi_i \partial_r phi_j dr)
+		- ``Sss_R`` (``float64 array``) : Stiffness matrix on the reference triangle (int_T \partial_s phi_i \partial_s phi_j dr)
+		- ``Dr_R`` (``float64 array``) : Differentiation matrix along r-direction
+		- ``Ds_R`` (``float64 array``) : Differentiation matrix along s-direction
+		- ``M1D_R`` (``float64 array``) : Mass matrix on the reference interval (1D)
+		- ``f`` (``lambda function``) : source
+		- ``u_D`` (``lambda function``) : Dirichlet boundary condition
+		- ``u_N`` (``lambda function``) : Neumann boundary condition
+
+	Returns
+		- ``c4nNew`` (``float64 array``) : coordinates for element obtained from red refinement
+		- ``n4eNew`` (``int32 array``) : nodes for element obtained from red refinement
+		- ``n4DbNew`` (``int32 array``) : nodes for Dirichlet boundary obtained from red refinement
+		- ``n4NbNew`` (``int32 array``) : nodes for Neumann boundary obtained from red refinement
+
+	Example
+		>>> N = 3
+		>>> c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+		>>> n4e = np.array([[1, 3, 0], [3, 1, 2]])
+		>>> n4sDb = np.array([[0, 1], [2, 3], [3, 4]])
+		>>> n4sNb = np.array([[1, 2]])
+		>>> c4nNew, ind4e, ind4Db, ind4Nb = getIndex(N, c4n, n4e, n4sDb, n4sNb)
+		>>> M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R, M1D_R = getMatrix(N)
+		>>> c4nNew
+		array([[ 0. ,  0. ],
+		   [ 1. ,  0. ],
+		   [ 1. ,  1. ],
+		   [ 0. ,  1. ],
+		   [ 0.5,  0.5],
+		   [ 0. ,  0.5],
+		   [ 1. ,  0.5],
+		   [ 0.5,  0. ],
+		   [ 0.5,  1. ]])
+		>>> n4eNew
+		array([[1, 4, 7],
+		   [4, 3, 5],
+		   [5, 7, 4],
+		   [7, 5, 0],
+		   [3, 4, 8],
+		   [4, 1, 6],
+		   [6, 8, 4],
+		   [8, 6, 2]])
+		>>> n4DbNew
+		array([[0, 7],
+		   [7, 1],
+		   [1, 6],
+		   [6, 2]])
+		>>>n4NbNew
+		array([[2, 8],
+		   [8, 3],
+		   [3, 5],
+		   [5, 0]])
+	"""
+	from os import listdir
+	from scipy.sparse import coo_matrix
+	from scipy.sparse.linalg import spsolve
+	from scipy import sparse
+
+
+	nrElems = n4e.shape[0]
+	nrLocal = M_R.shape[0]
+	nrNodes = c4nNew.shape[0]
+	nrNbSide = ind4Nb.shape[0]
+	nrLocalS = M1D_R.shape[0]
+
+	I = np.zeros((nrElems * nrLocal * nrLocal), dtype=np.int32)
+	J = np.zeros((nrElems * nrLocal * nrLocal), dtype=np.int32)
+	Alocal = np.zeros((nrElems * nrLocal * nrLocal), dtype=np.float64)
+	b = np.zeros(nrNodes)
+
+	f_val = f(c4nNew[ind4e.flatten(),0], c4nNew[ind4e.flatten(),1])
+	g_val = u_N(c4nNew[ind4Nb.flatten(),0], c4nNew[ind4Nb.flatten(),1])
+
+	Poison_2D = lib['Poisson_2D_Triangle'] # need the extern!!
+	Poison_2D.argtypes = (c_void_p, c_void_p, c_void_p, c_void_p, c_int,
+						c_int, c_void_p, c_void_p,
+						c_void_p, c_void_p, c_void_p, c_void_p, c_int, c_int,
+						c_void_p, c_void_p,
+						c_void_p, c_void_p, c_void_p, c_void_p)
+	Poison_2D.restype = None
+	Poison_2D(c_void_p(n4e.ctypes.data), c_void_p(ind4e.ctypes.data),
+		c_void_p(ind4Nb.ctypes.data), c_void_p(c4nNew.ctypes.data), c_int(nrElems),
+		c_int(nrNbSide), c_void_p(M_R.ctypes.data), c_void_p(M1D_R.ctypes.data),
+		c_void_p(Srr_R.ctypes.data), c_void_p(Srs_R.ctypes.data), c_void_p(Ssr_R.ctypes.data),
+		c_void_p(Sss_R.ctypes.data), c_int(nrLocal), c_int(nrLocalS),
+		c_void_p(f_val.ctypes.data), c_void_p(g_val.ctypes.data),
+		c_void_p(I.ctypes.data), c_void_p(J.ctypes.data),
+		c_void_p(Alocal.ctypes.data), c_void_p(b.ctypes.data))
+
+	STIMA_COO = coo_matrix((Alocal, (I, J)), shape=(nrNodes, nrNodes))
+	STIMA_CSR = STIMA_COO.tocsr()
+
+	dof = np.setdiff1d(range(0,nrNodes), ind4Db)
+
+	x = np.zeros(nrNodes)
+	x[ind4Db] = u_D(c4nNew[ind4Db,0], c4nNew[ind4Db,1])
+	b = b - sparse.csr_matrix.dot(STIMA_CSR,x)
+	x[dof] = spsolve(STIMA_CSR[dof, :].tocsc()[:, dof].tocsr(), b[dof])
 	
+	return x
 
 
 def sample():
