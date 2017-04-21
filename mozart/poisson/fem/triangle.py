@@ -69,26 +69,54 @@ def getMatrix(degree):
 	Sss_R = np.dot(np.dot(np.transpose(Ds_R),M_R),Ds_R)
 	return (M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R)
 
-def getIndex(degree, nrNodes, n4e):
+def getIndex(degree, c4n, n4e, n4sDb, n4sNb):
 	"""
 	Get indices on each element
 
 	Paramters
 		- ``degree`` (``int32``) : degree of polynomial
-		- ``nrNodes`` (``int32``) : the number of nodes (c4n.shape[0])
+		- ``c4n`` (``float64 array``) : coordinates for nodes
 		- ``n4e`` (``int32 array``) : nodes for elements
+		- ``n4sDb`` (``int32 array``) : nodes for sides on Dirichlet boundary
+		- ``n4sNb`` (``int32 array``) : nodes for sides on Neumann boundary
 
 	Returns
+		- ``c4nNew`` (``float64 array``) : coordinates for all nodes (vetex, side and interior nodes)
 		- ``ind4e`` (``int32 array``) : indices on each element
+		- ``ind4Db`` (``int32 array``) : indices on Dirichlet boundary
+		- ``ind4Nb`` (``int32 array``) : indices on Neumann boundary
 
 	Example
-		>>> N = 2
+		>>> N = 3
 		>>> c4n = np.array([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
 		>>> n4e = np.array([[1, 3, 0], [3, 1, 2]])
-		>>> ind4e = getIndex(N, c4n.shape[0], n4e)
+		>>> n4sDb = np.array([[0, 1], [2, 3], [3, 4]])
+		>>> n4sNb = np.array([[1, 2]])
+		>>> c4nNew, ind4e, ind4Db, ind4Nb = getIndex(N, c4n, n4e, n4sDb, n4sNb)
+		>>> c4nNew
+		array([[ 0.        ,  0.        ],
+		   [ 1.        ,  0.        ],
+		   [ 1.        ,  1.        ],
+		   [ 0.        ,  1.        ],
+		   [ 0.66666667,  0.33333333],
+		   [ 0.33333333,  0.66666667],
+		   [ 0.        ,  0.66666667],
+		   [ 0.        ,  0.33333333],
+		   [ 1.        ,  0.33333333],
+		   [ 1.        ,  0.66666667],
+		   [ 0.33333333,  0.        ],
+		   [ 0.66666667,  0.        ],
+		   [ 0.66666667,  1.        ],
+		   [ 0.33333333,  1.        ],
+		   [ 0.33333333,  0.33333333],
+		   [ 0.66666667,  0.66666667]])
 		>>> ind4e
-		array([[0, 7, 1, 5, 4, 3],
-		   [2, 8, 3, 6, 4, 1]])
+		array([[ 0, 10, 11,  1,  7, 14,  4,  6,  5,  3],
+		   [ 2, 12, 13,  3,  9, 15,  5,  8,  4,  1]])
+		>>> ind4Db
+		array([ 0,  1,  2,  3,  4,  4,  5, 10, 11, 12, 13])
+		>>> ind4Nb
+		array([[1, 8, 9, 2]])
 	"""
 	allSides = np.vstack((np.vstack((n4e[:,[0,1]], n4e[:,[1,2]])),n4e[:,[2,0]]))
 	tmp=np.sort(allSides)
@@ -103,10 +131,22 @@ def getIndex(degree, nrNodes, n4e):
 	s4e = sideNr[back].reshape(3,-1).transpose().astype('int')
 
 	nrElems = n4e.shape[0]
+	elemNumbers = np.hstack((np.hstack((np.arange(0,nrElems),np.arange(0,nrElems))),np.arange(0,nrElems)))
+
+	e4s=np.zeros((ind.size,2),int)
+	e4s[:,0]=elemNumbers[n4sInd] + 1
+
+	allElems4s=np.zeros(allSides.shape[0],int)
+	tmp2 = np.bincount((back + 1),weights = (elemNumbers + 1))
+	allElems4s[ind]=tmp2[1::]
+	e4s[:,1] = allElems4s[n4sInd] - e4s[:,0]
+	e4s=e4s-1
+
 	sideNr2 = np.zeros(3*nrElems, dtype = int)
 	sideNr2[n4sInd] = 1
 	S_ind = sideNr2.reshape(n4e.shape[1],n4e.shape[0]).transpose()
 
+	nrNodes = c4n.shape[0]
 	nrLocal = int((degree+1)*(degree+2)/2)
 	nri = int((degree-2)*(degree-1)/2)
 	nNS = nrNodes + (degree-1)*n4s.shape[0]
@@ -125,7 +165,53 @@ def getIndex(degree, nrNodes, n4e):
 	   (np.tile((1-S_ind[:,0]),(degree-1,1)).transpose()*np.tile(np.arange(degree-2,-1,-1),(n4e.shape[0],1)))
 	ind4e[:,BDindex_F[2]] = nrNodes + np.tile(s4e[:,0]*(degree-1),(degree-1,1)).transpose() + edge
 	ind4e[:,Iindex] = np.arange(nNS,nNS+nrElems*nri).reshape(nrElems,nri)
-	return ind4e
+
+	# Compute boundary information
+	indexBDs = (e4s[:,1]==-1).nonzero()[0]
+	nrSides = n4s.shape[0]
+	from scipy.sparse import coo_matrix
+	BDsides_COO = coo_matrix((indexBDs, (n4s[indexBDs,0], n4s[indexBDs,1])), shape=(nrSides, nrSides))
+	BDsides_CSR = BDsides_COO.tocsr()
+	indexDbs = np.zeros(n4sDb.shape[0], dtype=int)
+	for j in range(0,n4sDb.shape[0]):
+		indexDbs[j] = BDsides_CSR[n4sDb[j,0], n4sDb[j,1]]
+
+	indexDbs = np.sort(indexDbs)
+	nrDbs = indexDbs.shape[0]
+	tmp = np.tile(indexDbs * (degree - 1),(degree-1,1)).transpose() + \
+	   np.tile(np.arange(0,degree-1),(nrDbs,1))
+	ind4Db = np.append(np.unique(n4sDb), nrNodes + tmp.flatten())
+
+	if n4sNb.size != 0:
+		ind4Nb = np.zeros((n4sNb.shape[0], degree+1), dtype = int)
+		BDindex_F = np.array([(np.arange(degree,-1,-1)*(2*degree+4 - np.arange(degree+1,0,-1))/2).astype(int),
+			np.arange(0,degree+1), (degree + np.arange(0,degree+1)*(2*degree+2 - np.arange(1,degree+2))/2).astype(int)])
+		for j in range(0,n4sNb.shape[0]):
+			sideNb = BDsides_CSR[n4sNb[j,0], n4sNb[j,1]]
+			elem = e4s[sideNb, 0]
+			ind4Nb[j,:] = ind4e[elem,BDindex_F[s4e[elem,[1,2,0]] == sideNb,:]]
+
+	r, s = RefNodes_Tri(degree)
+
+	if degree > 1:
+		r1D = np.linspace(-1,1,degree+1)
+		r1D = r1D[1:degree]
+		Mid = (c4n[n4s[:,0],:] + c4n[n4s[:,1],:])/2
+		c4sx = np.tile(Mid[:,0],(degree-1,1)).transpose() + np.outer((c4n[n4s[:,1],0] - c4n[n4s[:,0],0])/2,r1D)
+		c4sy = np.tile(Mid[:,1],(degree-1,1)).transpose() + np.outer((c4n[n4s[:,1],1] - c4n[n4s[:,0],1])/2,r1D)
+		c4s = np.vstack((c4sx.flatten(), c4sy.flatten())).transpose()
+		c4nNew = np.vstack((c4n, c4s))
+
+	if degree > 2:
+		i_ind = np.setdiff1d(np.arange(0,nrLocal),BDindex_F.flatten())
+		c4ix = np.outer(c4n[n4e[:,0],0],r[i_ind]+1)/2 + np.outer(c4n[n4e[:,1],0],s[i_ind]+1)/2 \
+		   - np.outer(c4n[n4e[:,2],0], r[i_ind]+s[i_ind])/2
+		c4iy = np.outer(c4n[n4e[:,0],1],r[i_ind]+1)/2 + np.outer(c4n[n4e[:,1],1],s[i_ind]+1)/2 \
+		   - np.outer(c4n[n4e[:,2],1], r[i_ind]+s[i_ind])/2
+		c4i = np.vstack((c4ix.flatten(), c4iy.flatten())).transpose()
+		c4nNew = np.vstack((c4nNew, c4i))
+
+	return (c4nNew, ind4e, ind4Db, ind4Nb)
 
 def compute_n4s(n4e):
 	"""
