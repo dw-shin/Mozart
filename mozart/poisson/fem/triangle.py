@@ -7,7 +7,7 @@ from mozart.common.etc import prefix_by_os
 dllpath = path.join(mz.__path__[0], prefix_by_os(platform) + '_' + 'libmozart.so')
 lib = CDLL(dllpath)
 
-from mozart.poisson.fem.common import RefNodes_Tri, Vandermonde2D, Dmatrices2D
+from mozart.poisson.fem.common import RefNodes_Tri, Vandermonde2D, Dmatrices2D, VandermondeM1D
 
 def getMatrix(degree):
 	"""
@@ -24,10 +24,11 @@ def getMatrix(degree):
 		- ``Sss_R`` (``float64 array``) : Stiffness matrix on the reference triangle (int_T \partial_s phi_i \partial_s phi_j dr)
 		- ``Dr_R`` (``float64 array``) : Differentiation matrix along r-direction
 		- ``Ds_R`` (``float64 array``) : Differentiation matrix along s-direction
+		- ``M1D_R`` (``float64 array``) : Mass matrix on the reference interval (1D)
 
 	Example
 		>>> N = 1
-		>>> M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R = getMatrix(N)
+		>>> M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R, M1D_R = getMatrix(N)
 		>>> M_R
 		array([[ 0.33333333,  0.16666667,  0.16666667],
 		   [ 0.16666667,  0.33333333,  0.16666667],
@@ -56,6 +57,9 @@ def getMatrix(degree):
 		array([[ -5.00000000e-01,   9.80781986e-17,   5.00000000e-01],
 		   [ -5.00000000e-01,   9.80781986e-17,   5.00000000e-01],
 		   [ -5.00000000e-01,   9.80781986e-17,   5.00000000e-01]])
+		>>> M1D_R
+		array([[ 0.66666667,  0.33333333],
+		   [ 0.33333333,  0.66666667]])
 	"""
 
 	r, s = RefNodes_Tri(degree)
@@ -67,7 +71,12 @@ def getMatrix(degree):
 	Srs_R = np.dot(np.dot(np.transpose(Dr_R),M_R),Ds_R)
 	Ssr_R = np.dot(np.dot(np.transpose(Ds_R),M_R),Dr_R)
 	Sss_R = np.dot(np.dot(np.transpose(Ds_R),M_R),Ds_R)
-	return (M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R)
+
+	r1D = np.linspace(-1, 1, degree+1)
+	V1D = VandermondeM1D(degree, r1D)
+	invV1D = np.linalg.inv(V1D)
+	M1D_R = np.dot(np.transpose(invV1D),invV1D)
+	return (M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R, M1D_R)
 
 def getIndex(degree, c4n, n4e, n4sDb, n4sNb):
 	"""
