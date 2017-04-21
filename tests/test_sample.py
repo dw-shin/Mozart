@@ -276,7 +276,7 @@ class TestFemTriangle(unittest.TestCase):
 	def test_getMatrix2D(self):
 		from mozart.poisson.fem.triangle import getMatrix
 		N = 1
-		M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R = getMatrix(N)
+		M_R, Srr_R, Srs_R, Ssr_R, Sss_R, Dr_R, Ds_R, M1D_R = getMatrix(N)
 		diff_M = M_R - np.array([[1.0/3, 1.0/6, 1.0/6,], [1.0/6, 1.0/3, 1.0/6], [1.0/6, 1.0/6, 1.0/3]], dtype = np.float64)
 		diff_Srr = Srr_R - np.array([[1.0/2, -1.0/2, 0.0], [-1.0/2, 1.0/2, 0.0], [0.0, 0.0, 0.0]], dtype = np.float64)
 		diff_Srs = Srs_R - np.array([[1.0/2, 0.0, -1.0/2], [-1.0/2, 0.0, 1.0/2], [0.0, 0.0, 0.0]], dtype = np.float64)
@@ -284,6 +284,7 @@ class TestFemTriangle(unittest.TestCase):
 		diff_Sss = Sss_R - np.array([[1.0/2, 0.0, -1.0/2], [0.0, 0.0, 0.0], [-1.0/2, 0.0, 1.0/2]], dtype = np.float64)
 		diff_Dr = Dr_R - np.array([[-1.0/2, 1.0/2, 0.0], [-1.0/2, 1.0/2, 0.0], [-1.0/2, 1.0/2, 0.0]], dtype = np.float64)
 		diff_Ds = Ds_R - np.array([[-1.0/2, 0.0, 1.0/2], [-1.0/2, 0.0, 1.0/2], [-1.0/2, 0.0, 1.0/2]], dtype = np.float64)
+		diff_M1D = M1D_R - np.array([[2.0/3, 1.0/3], [1.0/3, 2.0/3]])
 		self.assertTrue(LA.norm(diff_M) < 1E-8)
 		self.assertTrue(LA.norm(diff_Srr) < 1E-8)
 		self.assertTrue(LA.norm(diff_Srs) < 1E-8)
@@ -291,6 +292,7 @@ class TestFemTriangle(unittest.TestCase):
 		self.assertTrue(LA.norm(diff_Sss) < 1E-8)
 		self.assertTrue(LA.norm(diff_Dr) < 1E-8)
 		self.assertTrue(LA.norm(diff_Ds) < 1E-8)
+		self.assertTrue(LA.norm(diff_M1D) < 1E-8)
 
 	def test_compute_n4s(self):
 		from mozart.poisson.fem.triangle import compute_n4s
